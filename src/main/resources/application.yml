@@ -1,0 +1,63 @@
+server:
+  port: 9999
+spring:
+  application:
+    name: service-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: 2728923d-40fa-4a8e-b25c-9b4408065a9b
+    gateway:
+      discovery:      #是否与服务发现组件进行结合，通过 serviceId(必须设置成大写) 转发到具体的服务实例。默认为false，设为true便开启通过服务中心的自动根据 serviceId 创建路由的功能。
+        locator:      #路由访问方式：http://Gateway_HOST:Gateway_PORT/大写的serviceId/**，其中微服务应用名默认大写访问。
+          enabled: true
+      routes:
+        - id: host_route
+#          uri: "http://localhost:8080/echo/"
+          uri: "lb://service-consumer"
+          predicates:
+            - Path=/echo/**
+          filters:
+#            - StripPrefix=0
+            - name: Hystrix
+              args:
+                name: fallbackcmd
+                fallbackUri: forward:/fallback
+
+#              spring:
+#                cloud:
+#                  gateway:
+#                    routes:
+#                      - predicates:KeyResolver
+#                          - Path=/java/**
+#                        filters:
+#                          - StripPrefix=1
+#                        uri: "http://localhost:8090/helloWorld"
+
+hystrix:
+  command:
+    fallbackcmd:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 3000
+      threadPool:
+        coreSize: 10
+
+
+# actuator监控
+management:
+  server:
+    # 设置监控服务端口
+    port: 8081
+  endpoints:
+    # 设置端点是否可用 默认只有shutdown可用
+    enabled-by-default: true
+    web:
+      # 设置是否暴露端点 默认只有health和info可见
+      exposure:
+        # 包括所有端点
+        include: "*" # 注意需要添加引号
+        # 排除端点
+        exclude: shutdown
